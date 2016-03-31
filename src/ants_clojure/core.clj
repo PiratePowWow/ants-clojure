@@ -17,14 +17,25 @@
 (defn create-ants []
   (for [i (range ant-count)]
     {:x (rand-int width)
-     :y (rand-int height)}))
+     :y (rand-int height)
+     :color (Color/BLACK)}))
 
 (defn draw-ants! [context]
   (.clearRect context 0 0 width height)
   (doseq [ant @ants]
     ;context.setFill(Color.BLACK)
-    (.setFill context Color/BLACK)
+    (.setFill context (:color ant))
     (.fillOval context (:x ant) (:y ant) 5 5)))
+
+(defn aggravate-ant [ant]
+  (let [nearby-ants (filter (fn nearby [angry-ant] 
+                              (> 10 (Math/pow (+ (Math/pow (Math/abs (- (:x ant) (:x angry-ant))) 2)
+                                                 (Math/pow (Math/abs (- (:y ant) (:y angry-ant))) 2))
+                                              0.5)))
+                            @ants)]
+    (if (= 1 (count nearby-ants))
+      (assoc ant :color Color/BLACK)
+      (assoc ant :color Color/RED))))
 
 (defn random-step []
   (- (* 2 (rand)) 1))
@@ -50,7 +61,8 @@
                 (handle [now]
                   (.setText fps-label (str (fps now)))
                   (reset! last-timestamp now)
-                  (reset! ants (pmap move-ant @ants))
+                  (reset! ants (doall (pmap move-ant @ants)))
+                  (reset! ants (doall (pmap aggravate-ant @ants)))
                   (draw-ants! context)))]
     (reset! ants (create-ants))
     (.setTitle stage "Ants")
